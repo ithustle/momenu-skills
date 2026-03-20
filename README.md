@@ -18,12 +18,15 @@ Segue a especificacao aberta [Agent Skills](https://agentskills.io/specification
 
 ```bash
 # Instalar todos os skills
-npx skills add ithustle/momenu-skills
+npx skills add ithustle/momenu-skills --all
+
+# Instalar skills especificos
+npx skills add ithustle/momenu-skills --skill mom-factura-payments --skill mom-factura-webhooks -y
 
 # Instalar um skill especifico
-npx skills add ithustle/momenu-skills/mom-factura-payments
-npx skills add ithustle/momenu-skills/mom-factura-webhooks
-npx skills add ithustle/momenu-skills/mom-factura-testing
+npx skills add ithustle/momenu-skills --skill mom-factura-payments -y
+npx skills add ithustle/momenu-skills --skill mom-factura-webhooks -y
+npx skills add ithustle/momenu-skills --skill mom-factura-testing -y
 ```
 
 ### Manual — Claude Code
