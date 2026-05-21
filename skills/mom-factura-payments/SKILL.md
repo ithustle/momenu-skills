@@ -23,10 +23,6 @@ Content-Type: application/json
 x-api-key: <MERCHANT_API_KEY>
 ```
 
-Optional headers:
-- `x-env-qa: true` - QA test environment (any origin)
-- `x-dev-mode: true` - Bypass domain validation (localhost only)
-
 ## Payment Methods
 
 ### 1. Multicaixa Express (MCX) - Immediate
