@@ -4,7 +4,7 @@ description: Integrate Mom Factura Payment API for Angolan payment methods (Mult
 license: MIT
 metadata:
   author: mom-factura
-  version: "1.0"
+  version: "1.1"
   language: pt
 ---
 
@@ -40,7 +40,16 @@ Optional body:
 - `products[].id` (string), `products[].productName` (string), `products[].productPrice` (number), `products[].productQuantity` (number)
 - `products[].iva` (number) - IVA rate 0-14, default 14
 - `customer` (object) - `name` (string), `nif` (string), `phone` (string)
+- `instantWithdraw` (boolean) - Auto-payout (amount minus 2%) to the merchant's verified bank account on confirmation. **Optional now; REQUIRED from 2026-06-22.** See [Instant Withdrawal](#instant-withdrawal).
 - `simulateResult` (string) - QA only: success, insufficient_balance, timeout, rejected, invalid_number
+
+Example body:
+```json
+{
+  "paymentInfo": { "amount": 5000, "phoneNumber": "244923456789" },
+  "instantWithdraw": true
+}
+```
 
 Success (200):
 ```json
@@ -80,7 +89,7 @@ Payment confirmation arrives via webhook. Use `code` with status endpoint as fal
 Generates bank reference. Client pays via ATM or Internet Banking.
 
 Required: `paymentInfo.amount`
-Optional: `products`, `customer` (same as MCX)
+Optional: `products`, `customer` (same as MCX), `instantWithdraw` (boolean — **required from 2026-06-22**; see [Instant Withdrawal](#instant-withdrawal))
 
 Success (200):
 ```json
@@ -140,6 +149,18 @@ Non-paid events (operationStatus 3, 4, 5) are sent without the `event` field for
 **Reference:** GET `/api/payment/reference/status/:operationId` - Returns `payment.status`
 
 When paid, both return `invoiceUrl`.
+
+## Instant Withdrawal
+
+With `instantWithdraw: true`, the payment value — **minus the 2% fee** — is transferred automatically (via E-kwanza KWiK) to the merchant's verified bank account as soon as the payment is confirmed.
+
+- **Applies to:** Multicaixa Express (`/api/payment/mcx`) and Bank Reference (`/api/payment/reference`).
+- **Not eligible:** direct E-kwanza payments (`/api/payment/ekwanza`) — the field is ignored.
+- **Requires** a verified (approved) bank account for the merchant. Without it, the payment request is rejected.
+- The flag is read **only** from the order created at payment time — it cannot be forced later via the status/polling request.
+- Amounts above the per-withdrawal ceiling stay in the merchant balance for a manual withdrawal.
+
+> ⚠️ **Mandatory from 2026-06-22:** `instantWithdraw` becomes **required** in the body of `/api/payment/mcx` and `/api/payment/reference`. Update your integration to always send `"instantWithdraw": true` before this date.
 
 ## Error Codes
 
