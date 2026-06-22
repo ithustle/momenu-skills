@@ -1,16 +1,16 @@
 ---
 name: mom-factura-webhooks
-description: Implement webhook-based payment confirmation for Mom Factura API. Webhooks work for both Bank Reference and E-kwanza, sending two sequential events (payment.confirmed + invoice.created). Use when building payment confirmation flows, receiving webhook notifications, or handling order state transitions from OPEN to PAID. Status polling endpoints available as fallback.
+description: Implement webhook-based payment confirmation for Mom Factura API. Webhooks work for Bank Reference, sending two sequential events (payment.confirmed + invoice.created). Use when building payment confirmation flows, receiving webhook notifications, or handling order state transitions from OPEN to PAID. Status polling endpoint available as fallback.
 license: MIT
 metadata:
   author: mom-factura
-  version: "3.0"
+  version: "3.1"
   language: pt
 ---
 
 # Mom Factura Webhooks & Status
 
-Receive payment confirmations for deferred payments (Bank Reference and E-kwanza) via webhook with two sequential events. Status polling endpoints available as fallback.
+Receive payment confirmations for deferred Bank Reference payments via webhook with two sequential events. Status polling endpoint available as fallback.
 
 **Base URL:** `https://api.momenu.online`
 **Auth:** `x-api-key` header required on all requests.
@@ -135,23 +135,22 @@ def momenu_webhook():
 
 ## Fallback: Status Polling
 
-If webhook delivery fails, use status endpoints as fallback:
+If webhook delivery fails, use the status endpoint as fallback:
 
-**E-kwanza:** GET `/api/payment/ekwanza/status/:code`
 **Reference:** GET `/api/payment/reference/status/:operationId`
 
-When paid, both return `invoiceUrl`.
+When paid, it returns `invoiceUrl`.
 
 ```javascript
-async function checkEkwanzaStatus(code) {
+async function checkReferenceStatus(operationId) {
   const response = await fetch(
-    `https://api.momenu.online/api/payment/ekwanza/status/${code}`,
+    `https://api.momenu.online/api/payment/reference/status/${operationId}`,
     { headers: { "x-api-key": "YOUR_API_KEY" } }
   );
 
   const data = await response.json();
 
-  if (data.status === "paid") {
+  if (data.payment?.status === "paid") {
     console.log("Paid! Invoice:", data.invoiceUrl);
   }
 
@@ -161,8 +160,8 @@ async function checkEkwanzaStatus(code) {
 
 ## Notes
 
-- Webhook works for both Bank Reference and E-kwanza
-- Webhook delivery is fire-and-forget (no retries) — implement status endpoints as fallback
+- Webhook works for Bank Reference
+- Webhook delivery is fire-and-forget (no retries) — implement the status endpoint as fallback
 - Your webhook endpoint must return HTTP 2xx to acknowledge receipt
 - MCX payments are immediate and do not use webhooks or polling
-- Rate limiting: 100 req/min general, minimum 5s interval for E-kwanza polling, 30s for Reference polling
+- Rate limiting: 100 req/min general, minimum 30s interval for Reference polling

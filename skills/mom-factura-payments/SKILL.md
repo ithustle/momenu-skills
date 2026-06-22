@@ -1,10 +1,10 @@
 ---
 name: mom-factura-payments
-description: Integrate Mom Factura Payment API for Angolan payment methods (Multicaixa Express, E-kwanza, Bank Reference). Use when implementing checkout flows, processing payments, generating SAFT-AO compliant invoices, or handling product-based billing with IVA tax.
+description: Integrate Mom Factura Payment API for Angolan payment methods (Multicaixa Express, Bank Reference). Use when implementing checkout flows, processing payments, generating SAFT-AO compliant invoices, or handling product-based billing with IVA tax.
 license: MIT
 metadata:
   author: mom-factura
-  version: "1.1"
+  version: "1.2"
   language: pt
 ---
 
@@ -34,13 +34,13 @@ Immediate payment. Creates order as PAID and generates invoice on success.
 Required body:
 - `paymentInfo.amount` (number) - Kwanzas
 - `paymentInfo.phoneNumber` (string) - Format: 244XXXXXXXXX
+- `instantWithdraw` (boolean) - **Must be `true`.** Auto-payout (amount minus 2%) to the merchant's verified bank account on confirmation. See [Instant Withdrawal](#instant-withdrawal).
 
 Optional body:
 - `products` (array) - Items for detailed invoice
 - `products[].id` (string), `products[].productName` (string), `products[].productPrice` (number), `products[].productQuantity` (number)
 - `products[].iva` (number) - IVA rate 0-14, default 14
 - `customer` (object) - `name` (string), `nif` (string), `phone` (string)
-- `instantWithdraw` (boolean) - Auto-payout (amount minus 2%) to the merchant's verified bank account on confirmation. **Optional now; REQUIRED from 2026-06-22.** See [Instant Withdrawal](#instant-withdrawal).
 - `simulateResult` (string) - QA only: success, insufficient_balance, timeout, rejected, invalid_number
 
 Example body:
@@ -60,36 +60,14 @@ Success (200):
 }
 ```
 
-### 2. E-kwanza - Deferred
-
-**POST** `/api/payment/ekwanza`
-
-Deferred payment. Creates order as OPEN, returns QR code. Payment confirmation is delivered via webhook.
-
-Required: `paymentInfo.amount`, `paymentInfo.phoneNumber`
-Optional: `products`, `customer` (same as MCX)
-
-Success (200):
-```json
-{
-  "success": true,
-  "code": "EKZ123456",
-  "qrCode": "data:image/png;base64,...",
-  "expirationDate": "2024-01-15T12:00:00Z",
-  "paymentTimeout": 180
-}
-```
-
-Payment confirmation arrives via webhook. Use `code` with status endpoint as fallback.
-
-### 3. Bank Reference - Deferred
+### 2. Bank Reference - Deferred
 
 **POST** `/api/payment/reference`
 
 Generates bank reference. Client pays via ATM or Internet Banking.
 
-Required: `paymentInfo.amount`
-Optional: `products`, `customer` (same as MCX), `instantWithdraw` (boolean — **required from 2026-06-22**; see [Instant Withdrawal](#instant-withdrawal))
+Required: `paymentInfo.amount`, `instantWithdraw: true` (see [Instant Withdrawal](#instant-withdrawal))
+Optional: `products`, `customer` (same as MCX)
 
 Success (200):
 ```json
@@ -112,7 +90,7 @@ If both `paymentInfo.amount` and `products` are provided, they must match:
 
 ## Webhook (Payment Confirmation)
 
-All deferred payments (Bank Reference and E-kwanza) are confirmed via webhook. Configure the `webhook` URL in your `apiConfigs` document.
+Deferred Bank Reference payments are confirmed via webhook. Configure the `webhook` URL in your `apiConfigs` document.
 
 When a payment is confirmed, the API sends **two sequential events**:
 
@@ -143,24 +121,22 @@ Non-paid events (operationStatus 3, 4, 5) are sent without the `event` field for
 
 **operationStatus values:** `"1"` Paid · `"3"` Cancelled/Expired · `"4"` Failed/Refused · `"5"` Error
 
-**Fallback (status endpoints):**
+**Fallback (status endpoint):**
 
-**E-kwanza:** GET `/api/payment/ekwanza/status/:code` - Returns `status: "paid"` or `"pending"`
 **Reference:** GET `/api/payment/reference/status/:operationId` - Returns `payment.status`
 
 When paid, both return `invoiceUrl`.
 
 ## Instant Withdrawal
 
-With `instantWithdraw: true`, the payment value — **minus the 2% fee** — is transferred automatically (via E-kwanza KWiK) to the merchant's verified bank account as soon as the payment is confirmed.
+`instantWithdraw` is **required and must be `true`** on `/api/payment/mcx` and `/api/payment/reference`. The payment value — **minus the 2% fee** — is transferred automatically (via KWiK) to the merchant's verified bank account as soon as the payment is confirmed.
 
 - **Applies to:** Multicaixa Express (`/api/payment/mcx`) and Bank Reference (`/api/payment/reference`).
-- **Not eligible:** direct E-kwanza payments (`/api/payment/ekwanza`) — the field is ignored.
 - **Requires** a verified (approved) bank account for the merchant. Without it, the payment request is rejected.
 - The flag is read **only** from the order created at payment time — it cannot be forced later via the status/polling request.
 - Amounts above the per-withdrawal ceiling stay in the merchant balance for a manual withdrawal.
 
-> ⚠️ **Mandatory from 2026-06-22:** `instantWithdraw` becomes **required** in the body of `/api/payment/mcx` and `/api/payment/reference`. Update your integration to always send `"instantWithdraw": true` before this date.
+> ⚠️ **Required (since 2026-06-22):** requests to `/api/payment/mcx` and `/api/payment/reference` that omit `instantWithdraw` (or send `false`) are rejected with `INSTANT_WITHDRAW_REQUIRED` (HTTP 400). Always send `"instantWithdraw": true`.
 
 ## Error Codes
 
@@ -171,7 +147,8 @@ With `instantWithdraw: true`, the payment value — **minus the 2% fee** — is 
 | DOMAIN_NOT_ALLOWED | Origin not registered |
 | INVALID_AMOUNT | Invalid amount |
 | AMOUNT_MISMATCH | amount != SUM(products) |
-| MISSING_PHONE | Phone required (MCX/E-kwanza) |
+| INSTANT_WITHDRAW_REQUIRED | instantWithdraw required and must be true (MCX/Reference) |
+| MISSING_PHONE | Phone required (MCX) |
 | MISSING_RESTAURANT_ID | Merchant not identified |
 | RATE_LIMIT_EXCEEDED | 100 req/min exceeded |
 | PAYMENT_RATE_LIMIT_EXCEEDED | 20 payment req/min exceeded |
@@ -188,4 +165,4 @@ Error format: `{ "success": false, "error": "message", "code": "ERROR_CODE" }`
 - Phone format: 244XXXXXXXXX (12 digits)
 - IVA defaults to 14%. Use 0 for exempt.
 - Invoice PDFs hosted on CDN, returned as `invoiceUrl`
-- MCX is immediate; Reference and E-kwanza are confirmed via webhook (status polling as fallback)
+- MCX is immediate; Reference is confirmed via webhook (status polling as fallback)

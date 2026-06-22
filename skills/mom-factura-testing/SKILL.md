@@ -4,7 +4,7 @@ description: Test and debug Mom Factura Payment API integrations using QA enviro
 license: MIT
 metadata:
   author: mom-factura
-  version: "1.0"
+  version: "1.1"
   language: pt
 ---
 
@@ -80,16 +80,6 @@ curl -X POST https://api.momenu.online/api/payment/mcx \
 
 Returns: `{ "success": false, "code": "AMOUNT_MISMATCH" }`
 
-### E-kwanza in QA (no simulateResult support)
-
-```bash
-curl -X POST https://api.momenu.online/api/payment/ekwanza \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: YOUR_API_KEY" \
-  -H "x-env-qa: true" \
-  -d '{"paymentInfo":{"amount":2000,"phoneNumber":"244923456789"}}'
-```
-
 ### Reference in QA
 
 ```bash
@@ -156,9 +146,9 @@ for s in ["success", "insufficient_balance", "timeout", "rejected", "invalid_num
 | DOMAIN_NOT_ALLOWED | Origin not registered | Add `x-dev-mode: true` (localhost) or register domain |
 | MISSING_API_KEY | Header missing | Check header is `x-api-key` (lowercase, hyphens) |
 | AMOUNT_MISMATCH | amount != products total | Verify SUM(price*qty) == amount, or send only one |
-| MISSING_PHONE | No phone for MCX/E-kwanza | Add `paymentInfo.phoneNumber` (not needed for Reference) |
+| MISSING_PHONE | No phone for MCX | Add `paymentInfo.phoneNumber` (not needed for Reference) |
 | simulateResult ignored | Not in QA mode | Add header `x-env-qa: true` |
-| simulateResult ignored | Wrong endpoint | Only works on MCX, not E-kwanza or Reference |
+| simulateResult ignored | Wrong endpoint | Only works on MCX, not Reference |
 
 ## Pre-Production Checklist
 
@@ -169,6 +159,6 @@ for s in ["success", "insufficient_balance", "timeout", "rejected", "invalid_num
 5. Store API key in environment variables (never hardcode)
 6. Implement error handling for all error codes
 7. Implement webhook endpoint to receive payment confirmations
-8. Implement status endpoint fallback for E-kwanza and Reference
+8. Implement status endpoint fallback for Reference
 9. Verify amount validation with products
 10. Test with real phone numbers

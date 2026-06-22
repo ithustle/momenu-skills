@@ -1,6 +1,6 @@
 # MoMenu Skills
 
-Agent Skills para a [Mom Factura Payment API](https://api.momenu.online/docs) — pagamentos angolanos com Multicaixa Express, E-kwanza e Referencia Bancaria.
+Agent Skills para a [Mom Factura Payment API](https://api.momenu.online/docs) — pagamentos angolanos com Multicaixa Express e Referencia Bancaria.
 
 Segue a especificacao aberta [Agent Skills](https://agentskills.io/specification) e funciona com qualquer LLM agent compativel.
 
@@ -8,8 +8,8 @@ Segue a especificacao aberta [Agent Skills](https://agentskills.io/specification
 
 | Skill | Descricao |
 |-------|-----------|
-| **mom-factura-payments** | Integracao completa de pagamentos (MCX, E-kwanza, Referencia Bancaria) com geracao automatica de faturas SAFT-AO |
-| **mom-factura-webhooks** | Webhooks para confirmacao de pagamentos por Referencia Bancaria e status polling para E-kwanza |
+| **mom-factura-payments** | Integracao completa de pagamentos (MCX, Referencia Bancaria) com geracao automatica de faturas SAFT-AO |
+| **mom-factura-webhooks** | Webhooks para confirmacao de pagamentos por Referencia Bancaria (status polling como fallback) |
 | **mom-factura-testing** | Ambiente de testes QA, simulacao de resultados e checklist pre-producao |
 
 ## Instalacao

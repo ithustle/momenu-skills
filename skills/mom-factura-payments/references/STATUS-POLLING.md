@@ -2,7 +2,7 @@
 
 ## Webhook (Primary)
 
-Payment confirmation for Reference is delivered via webhook. E-kwanza uses status polling as the primary confirmation method.
+Payment confirmation for Reference is delivered via webhook.
 
 **Your webhook receives a POST with:**
 ```json
@@ -21,25 +21,6 @@ Payment confirmation for Reference is delivered via webhook. E-kwanza uses statu
 ## Status Endpoints (Fallback)
 
 Use these if webhook delivery fails or as a manual check.
-
-### E-kwanza Status
-
-**GET** `/api/payment/ekwanza/status/:code`
-
-Pending:
-```json
-{ "success": true, "status": "pending", "operationCode": "OP123..." }
-```
-
-Paid:
-```json
-{
-  "success": true,
-  "status": "paid",
-  "operationCode": "OP123...",
-  "invoiceUrl": "https://invoice-momenu.toquemedia.net/invoices/..."
-}
-```
 
 ### Bank Reference Status
 
@@ -64,4 +45,4 @@ Paid:
 - General: 100 req/min per IP
 - Payments: 20 req/min per IP (POST only)
 - Status endpoints (GET) count toward general limit
-- Minimum polling interval: 5 seconds (E-kwanza), 30 seconds (Reference)
+- Minimum polling interval: 30 seconds (Reference)
