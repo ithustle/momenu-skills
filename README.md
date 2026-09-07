@@ -11,6 +11,7 @@ Segue a especificacao aberta [Agent Skills](https://agentskills.io/specification
 | **mom-factura-payments** | Integracao completa de pagamentos (MCX, Referencia Bancaria) com geracao automatica de faturas SAFT-AO |
 | **mom-factura-webhooks** | Webhooks para confirmacao de pagamentos por Referencia Bancaria (status polling como fallback) |
 | **mom-factura-testing** | Ambiente de testes QA, simulacao de resultados e checklist pre-producao |
+| **mom-factura-pools** | Pool de Factura para revendedores — gestao de sub-tenants com NIF proprio, standalone keys e emissao via `/api/invoices` |
 
 ## Instalacao
 
@@ -27,6 +28,7 @@ npx skills add ithustle/momenu-skills --skill mom-factura-payments --skill mom-f
 npx skills add ithustle/momenu-skills --skill mom-factura-payments -y
 npx skills add ithustle/momenu-skills --skill mom-factura-webhooks -y
 npx skills add ithustle/momenu-skills --skill mom-factura-testing -y
+npx skills add ithustle/momenu-skills --skill mom-factura-pools -y
 ```
 
 ### Manual — Claude Code
@@ -54,6 +56,8 @@ skills/
   mom-factura-webhooks/
     SKILL.md
   mom-factura-testing/
+    SKILL.md
+  mom-factura-pools/
     SKILL.md
 ```
 
