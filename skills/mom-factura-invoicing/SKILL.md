@@ -23,7 +23,7 @@ x-api-key: <API_KEY>
 Content-Type: application/json
 ```
 
-Call from the backend only (an `Origin` header outside the account's domains → 403 `DOMAIN_NOT_ALLOWED`). Accounts with a team must use a generated key. A pool client key issues as that client (see `mom-factura-pool-invoices`).
+Call from the backend only (an `Origin` header outside the account's domains → 403 `DOMAIN_NOT_ALLOWED`). Limits: 120 requests/min per API key on these routes (429 `RATE_LIMIT_EXCEEDED` + `Retry-After`), body up to 512 KB. Accounts with a team must use a generated key. A pool client key issues as that client (see `mom-factura-pool-invoices`).
 
 **Scope:** every operation sees only the documents of the key's scope — account key: the account's documents; generated key: documents without a key plus its own; pool key: that client's documents. Out of scope → `404 INVOICE_NOT_FOUND`.
 
@@ -59,12 +59,12 @@ curl -X POST https://api.momenu.online/api/invoices \
   }'
 ```
 
-- Customer: `customerId` (registered) or `customer: { name, nif, phone?, address?, email? }`. A NIF that isn't real → issued to Consumidor Final (`999999999`) and the other customer fields are dropped.
-- Lines (1–100): `productId` (catalog: description, net price, VAT and exemption come from the product) or `description` + `unitPrice`; `quantity`; `iva` 14/7/5/0; `exemptionScheme` (M00–M94) when `iva` is 0 (or a document-level `scheme`); `discount` (Kz) or `discountPercent`.
+- Customer: `customerId` (registered — its NIF is used as stored) or `customer: { name, nif, phone?, address?, email? }`. An inline NIF that isn't a real Angolan NIF → issued to Consumidor Final (`999999999`) and the other customer fields are dropped.
+- Lines (1–100): `productId` (catalog: description, net price, VAT and exemption come from the product) or `description` + `unitPrice`; `quantity`; `iva` 14/7/5/0; `exemptionScheme` (M00–M94) when `iva` is 0 (or a document-level `scheme`; required when every line is exempt — in a mixed document an exempt line without a reason is issued as M00); `discount` (Kz) or `discountPercent`.
 - Prices include VAT by default; `pricesIncludeVat: false` for net prices. Catalog prices are always net.
 - `discount` (document) is spread over the lines. `withholding` `{ type: IRT|II|IS|IVA|IP|IAC|OU, percent | amount }`, max 30% of the total; the customer pays `amountDue`.
 - `paymentMethod` (required except proformas): `Multicaixa Express`, `E-Kwanza`, `Referência Bancária`, `Dinheiro`, `Transferência Bancária`, `Cartão de Crédito/Débito`, `TPA`, `Afrimoney`.
-- `format`: `A4` (default) or `C7` (thermal; FR only in practice). `notes` printed on the document.
+- `format`: `A4` (default) or `C7` (thermal; FR only — FT and proformas are A4). `notes` printed on the document.
 - **Totals:** the net unit price is rounded to the cent so the AGT registers exactly the document total. With VAT-inclusive prices the total may differ by cents from Σ quantity × price — **always use `total`/`amountDue` from the response**.
 
 201 → `{ success, invoiceNumber, invoiceType, documentId, invoiceUrl, total, totalIncidence, totalTaxes, totalDiscount, withholdingAmount, amountDue, format, createdAt }`. Store `invoiceNumber`: every other operation uses it.
@@ -73,15 +73,15 @@ curl -X POST https://api.momenu.online/api/invoices \
 
 - `GET /api/invoices/{n}` → `lines[]` (`line`, net/VAT/gross, `creditedQuantity`, `remainingQuantity`), `status` (`ACTIVE`, `PARTIALLY_CREDITED`, `CREDITED`, `CANCELLED`; proformas `ACTIVE`/`CONVERTED`/`CANCELLED`/`EXPIRED`), `totals`, `agt`, `creditNotes`, `receipt`.
 - `GET /api/invoices` → filters `type=FR,FT,NC,RC,PROFORMA`, `status=active|cancelled|rectified`, `paid=true|false` (FT), `agtStatus`, `customerNif`, `from`/`to` (YYYY-MM-DD, Luanda), `limit` (≤100, default 30), `offset`.
-- `GET /api/invoices/{n}/pdf?format=A4|C7&redirect=true` → current PDF (with the AGT QR once registered). `invoiceUrl` links are signed for 30 days.
+- `GET /api/invoices/{n}/pdf?format=A4|C7&redirect=true` → current PDF (with the AGT QR once registered). A signed `invoiceUrl` (30 days) opens the PDF in a browser; fetched by a program it returns `{ url }`.
 - `POST /api/invoices/{n}/email` `{ to?, cc?, bcc?, message? }` → PDF attached; default recipient = the customer's email. Limit 10/min per key, 200/day per account.
 - `POST /api/invoices/{n}/fe-status` → AGT status (`PENDING`, `VALID`, `INVALID`, `SUBMIT_FAILED`); resubmits recoverable failures.
 
 ## Credit notes
 
 - **Cancel** (`/cancel`, `{ reason }` 3–200 chars): reverses every line. Repeating returns the same NC (`alreadyCancelled: true`). An invoice with rectifications can't be cancelled (`409 ORIGIN_PARTIALLY_CREDITED`) — rectify the rest.
-- **Rectify** (`/rectify`): **`Idempotency-Key` required**. Lines are the `line` numbers of `GET /api/invoices/{n}`; quantities up to `remainingQuantity` (`409 QUANTITY_EXCEEDS_REMAINING` with `details`). Credits the price actually charged (after discount) at the line's VAT rate.
-- The origin must already have an AGT number (`409 ORIGIN_NOT_REGISTERED` → retry shortly).
+- **Rectify** (`/rectify`): **`Idempotency-Key` required**. Lines are the `line` numbers of `GET /api/invoices/{n}`; quantities up to `remainingQuantity` (`409 QUANTITY_EXCEEDS_REMAINING` with `details`). Credits the price actually charged (after discount) at the line's VAT rate. A line with a fractional quantity (e.g. 2.5 kg) can only be credited whole.
+- The origin must already be registered and not rejected by the AGT (`409 ORIGIN_NOT_REGISTERED` → retry shortly, or fix it via `/fe-status`).
 - `POST /api/credit-notes/a4|c7` is deprecated.
 
 ## Customers and products
@@ -91,7 +91,8 @@ curl -X POST https://api.momenu.online/api/invoices \
 
 ## Reliability rules
 
-1. Send `Idempotency-Key` (UUID) on every write; on a network error or 5xx/503 retry **with the same key** — you get the same document (`Idempotency-Replayed: true`), never a duplicate. Same key + different body → `409 IDEMPOTENCY_KEY_REUSED`.
-2. Branch on `code`, never on the message. Errors: `{ success: false, error, code, details? }`.
-3. `503 INTERNAL_SERVICE_UNAVAILABLE` / `REQUEST_IN_PROGRESS` → retry with backoff (same key).
-4. Documents are fiscal and registered with the AGT: test with a staging account first.
+1. Send `Idempotency-Key` (UUID, ≤ 255 chars) when issuing (`POST /api/invoices`, `/api/proformas/a4`), cancelling and rectifying. On a network error, `503` or `504 UPSTREAM_TIMEOUT` retry **with the same key** — you get the same document (`Idempotency-Replayed: true`), never a duplicate. Same key + different body → `409 IDEMPOTENCY_KEY_REUSED`.
+2. Receipts, proforma conversion/cancel and cancellation also repeat safely without a key. Customers don't duplicate (unique NIF → 409 with the existing id). **Products and emails are not idempotent**: retrying creates another product / sends another email.
+3. Branch on `code`, never on the message. Errors: `{ success: false, error, code, details? }`.
+4. `504 UPSTREAM_TIMEOUT` means the operation may have happened — retry with the same key or `GET` the document before doing anything else. `503`, `REQUEST_IN_PROGRESS` and `429` → retry with backoff.
+5. Documents are fiscal and registered with the AGT: test with a staging account first.
