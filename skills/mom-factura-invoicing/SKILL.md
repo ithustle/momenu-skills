@@ -23,7 +23,7 @@ x-api-key: <API_KEY>
 Content-Type: application/json
 ```
 
-Call from the backend only (an `Origin` header outside the account's domains → 403 `DOMAIN_NOT_ALLOWED`). Limits: 120 requests/min per API key on these routes (429 `RATE_LIMIT_EXCEEDED` + `Retry-After`), body up to 512 KB. Accounts with a team must use a generated key. A pool client key issues as that client (see `mom-factura-pool-invoices`).
+Call from the backend only (an `Origin` header outside the account's domains → 403 `DOMAIN_NOT_ALLOWED`). Limits: 120 requests/min per API key and 300/min per client IP on these routes (429 `RATE_LIMIT_EXCEEDED` + `Retry-After`), body up to 512 KB. Accounts with a team must use a generated key. A pool client key issues as that client (see `mom-factura-pool-invoices`).
 
 **Scope:** every operation sees only the documents of the key's scope — account key: the account's documents; generated key: documents without a key plus its own; pool key: that client's documents. Out of scope → `404 INVOICE_NOT_FOUND`.
 
