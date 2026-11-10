@@ -8,7 +8,7 @@ Segue a especificacao aberta [Agent Skills](https://agentskills.io/specification
 
 | Skill | Descricao |
 |-------|-----------|
-| **mom-factura-payments** | Integracao completa de pagamentos (MCX, Referencia Bancaria) com geracao automatica de faturas SAFT-AO |
+| **mom-factura-payments** | Integracao completa de pagamentos (MCX, Referencia Bancaria) com factura emitida e registada na AGT |
 | **mom-factura-webhooks** | Webhooks para confirmacao de pagamentos por Referencia Bancaria (status polling como fallback) |
 | **mom-factura-testing** | Ambiente de testes QA, simulacao de resultados e checklist pre-producao |
 | **mom-factura-pools** | Pool de Factura para revendedores — gestao de sub-tenants com NIF proprio, standalone keys e chave FE |
