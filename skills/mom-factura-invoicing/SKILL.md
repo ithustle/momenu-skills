@@ -1,6 +1,6 @@
 ---
 name: mom-factura-invoicing
-description: Issue and manage Angolan fiscal documents through the MoMenu Factura API — FR, FT, receipts (RC), credit notes (cancel or rectify by line), proformas, PDFs (A4/C7), email, AGT e-invoicing status, customers and products. Use when integrating invoicing (not payments) with api.momenu.online, or the user runs /mom-factura-invoicing.
+description: Issue and manage Angolan fiscal documents through the MoMenu Factura API — FR, FT, receipts (RC), credit notes (cancel or rectify by line), proformas, PDFs (A4/C7, with the merchant's own templates), email, AGT e-invoicing status, customers and products. Use when integrating invoicing (not payments) with api.momenu.online, or the user runs /mom-factura-invoicing.
 license: MIT
 metadata:
   author: mom-factura
@@ -65,6 +65,7 @@ curl -X POST https://api.momenu.online/api/invoices \
 - `discount` (document) is spread over the lines. `withholding` `{ type: IRT|II|IS|IVA|IP|IAC|OU, percent | amount }`, max 30% of the total; the customer pays `amountDue`.
 - `paymentMethod` (required except proformas): `Multicaixa Express`, `E-Kwanza`, `Referência Bancária`, `Dinheiro`, `Transferência Bancária`, `Cartão de Crédito/Débito`, `TPA`, `Afrimoney`.
 - `format`: `A4` (default) or `C7` (thermal; FR only — FT and proformas are A4). `notes` printed on the document.
+- `templateId` (FR/FT in A4 only): the PDF design to use, from `GET /api/templates` (designed in the portal under Templates; `padrao` = the classic MoMenu layout). Stored on the document — its PDF, credit notes and receipt always use it. Omit it to use the account's active template. Only templates with `complete: true` are accepted (`TEMPLATE_INCOMPLETE` lists what is missing); proformas, C7 and pool client keys can't use templates.
 - **Totals:** the net unit price is rounded to the cent so the AGT registers exactly the document total. With VAT-inclusive prices the total may differ by cents from Σ quantity × price — **always use `total`/`amountDue` from the response**.
 
 201 → `{ success, invoiceNumber, invoiceType, documentId, invoiceUrl, total, totalIncidence, totalTaxes, totalDiscount, withholdingAmount, amountDue, format, createdAt }`. Store `invoiceNumber`: every other operation uses it.
